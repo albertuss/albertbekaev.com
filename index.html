@@ -15,7 +15,7 @@
     a{color:#888;text-decoration:none;font-size:18px;letter-spacing:1px;transition:all .3s;}
     a:hover{color:#fff;text-decoration:underline;}
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@500;900&display=swap');
-  </style  </style>
+  </style>
 </head>
 <body>
   <div class="text">
@@ -30,90 +30,75 @@
   <script>
     const canvas = document.getElementById('c');
     const ctx = canvas.getContext('2d');
-    canvas.width = innerWidth;
-    canvas.height = innerHeight;
+    resize();
+    function resize() {
+      canvas.width = innerWidth * devicePixelRatio;
+      canvas.height = innerHeight * devicePixelRatio;
+      ctx.scale(devicePixelRatio, devicePixelRatio);
+      canvas.style.width = innerWidth + 'px';
+      canvas.style.height = innerHeight + 'px';
+    }
+    window.addEventListener('resize', resize);
 
     const particles = [];
-    const mouse = { x: 0, y: 0 };
-    let mouseMoved = false;
+    const mouse = { x: innerWidth/2, y: innerHeight/2 };
 
-    addEventListener('mousemove', e => {
-      mouse.x = e.clientX;
-      mouse.y = e.clientY;
-      mouseMoved = true;
-    });
-    addEventListener('resize', () => {
-      canvas.width = innerWidth;
-      canvas.height = innerHeight;
-      init();
-    });
+    // мышь + палец
+    window.addEventListener('mousemove', e => { mouse.x = e.clientX; mouse.y = e.clientY; });
+    window.addEventListener('touchmove', e => {
+      e.preventDefault();
+      const t = e.touches[0];
+      mouse.x = t.clientX;
+      mouse.y = t.clientY;
+    }, {passive:false});
 
     class Particle {
       constructor() {
-        this.reset();
-      }
-      reset() {
-        this.x = Math.random() * canvas.width;
-        this.y = Math.random() * canvas.height;
-        this.vx = (Math.random() - 0.5) * 1;
-        this.vy = (Math.random() - 0.5) * 1;
-        this.size = Math.random() * 4 + 2;
+        this.x = Math.random() * innerWidth;
+        this.y = Math.random() * innerHeight;
+        this.vx = (Math.random()-0.5)*0.8;
+        this.vy = (Math.random()-0.5)*0.8;
+        this.size = Math.random()*3 + 2;
       }
       draw() {
-        // плотный след — рисуем кружок несколько раз с убывающей прозрачностью
-        for (let i = 5; i > 0; i--) {
-          ctx.fillStyle = `rgba(180,180,180,${i * 0.04})`;
-          ctx.beginPath();
-          ctx.arc(this.x - this.vx * i, this.y - this.vy * i, this.size + i * 0.6, 0, Math.PI * 2);
-          ctx.fill();
-        }
+        ctx.fillStyle = '#bbbbbb';
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size, 0, Math.PI*2);
+        ctx.fill();
       }
       update() {
         const dx = mouse.x - this.x;
         const dy = mouse.y - this.y;
         const dist = Math.hypot(dx, dy);
-        if (dist < 130) {
-          const force = 130 / dist;
-          this.vx += dx * force * 0.05;
-          this.vy += dy * force * 0.05;
+        if (dist < 140) {
+          const f = 140 / dist;
+          this.vx += dx * f * 0.06;
+          this.vy += dy * f * 0.06;
         }
 
         this.x += this.vx;
         this.y += this.vy;
-        this.vx *= 0.97;
-        this.vy *= 0.97;
+        this.vx *= 0.965;
+        this.vy *= 0.965;
 
-        // отталкивание от краёв экрана (мягкое)
-        const margin = 60;
-        if (this.x < margin) this.vx += (margin - this.x) * 0.03;
-        if (this.x > canvas.width - margin) this.vx -= (this.x - (canvas.width - margin)) * 0.03;
-        if (this.y < margin) this.vy += (margin - this.y) * 0.03;
-        if (this.y > canvas.height - margin) this.vy -= (this.y - (canvas.height - margin)) * 0.03;
+        // правильное отталкивание от краёв
+        const edge = 70;
+        if (this.x < edge) this.vx += (edge - this.x) * 0.02;
+        if (this.x > innerWidth - edge) this.vx -= (this.x - (innerWidth - edge)) * 0.02;
+        if (this.y < edge) this.vy += (edge - this.y) * 0.02;
+        if (this.y > innerHeight - edge) this.vy -= (this.y - (innerHeight - edge)) * 0.02;
       }
     }
 
-    for (let i = 0; i < 140; i++) particles.push(new Particle());
-
-    // плавное исчезновение следа за ~15 секунд
-    function fade() {
-      ctx.fillStyle = 'rgba(10,10,10,0.008)';  // очень медленное затухание
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-    }
+    for(let i=0;i<140;i++) particles.push(new Particle());
 
     function animate() {
-      if (mouseMoved) {
-        // если курсор двигается — чуть ускоряем затухание, но всё ещё плавно
-        ctx.fillStyle = 'rgba(10,10,10,0.02)';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        mouseMoved = false;
-      } else {
-        fade();
-      }
+      ctx.fillStyle = 'rgba(10,10,10,0.03)';   // ← плавное и полное исчезновение за ~10–12 сек
+      ctx.fillRect(0,0,innerWidth,innerHeight);
 
       particles.forEach(p => { p.update(); p.draw(); });
       requestAnimationFrame(animate);
     }
-
     animate();
   </script>
 </body>
